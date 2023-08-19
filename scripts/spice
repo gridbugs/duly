@@ -1,0 +1,177 @@
+#!/bin/sh
+set -eu
+
+print_commands() {
+    echo "new   create a new project"
+}
+
+usage() {
+    echo "Usage: $0 [COMMAND]"
+    echo
+    echo "Commands are:"
+    print_commands
+}
+
+new_usage() {
+    echo "$0 new [OPTIONS] <path>"
+    echo
+    echo "Options:"
+    echo "  --bin        initialize with an executable (default)"
+    echo "  --lib        initialize with a library"
+    echo "  -h, --help   display this message"
+}
+
+new_check() {
+    NAME=$1
+    if ! echo $NAME | grep -q '^[a-z][a-z0-9_]*$'; then
+        echo "Invalid name: \`$NAME\`"
+        echo
+        echo "Names must consist of a lowercase letter followed by:"
+        echo " - lowercase letters"
+        echo " - digits"
+        echo " - underscores"
+        exit 1
+    fi
+    if [ -e "$NAME" ]; then
+        echo "Refusing to proceed because destination \`$NAME\` already exists."
+        exit 1
+    fi
+}
+
+print_gitignore() {
+    echo "_opam"
+}
+
+print_bin_package_manifest() {
+    NAME=$1
+    echo "[package]"
+    echo "name = \"$NAME\""
+    echo
+    echo "[dependencies]"
+    echo
+    echo "[bin.$NAME]"
+    echo src = "src"
+}
+
+print_lib_package_manifest() {
+    NAME=$1
+    echo "[package]"
+    echo "name = \"$NAME\""
+    echo
+    echo "[dependencies]"
+    echo
+    echo "[lib.$NAME]"
+    echo src = "src"
+}
+
+print_bin_ocaml() {
+    echo "let () = print_endline \"Hello, World!\""
+}
+
+print_lib_ocaml() {
+    echo "let add a b = a + b"
+}
+
+new_bin() {
+    NAME=$1
+    new_check $NAME
+    mkdir -p $NAME/src
+    cd $NAME
+    print_gitignore > .gitignore
+    print_bin_package_manifest $NAME > package.toml
+    print_bin_ocaml > src/main.ml
+}
+
+new_lib() {
+    NAME=$1
+    new_check $NAME
+    mkdir -p $NAME/src
+    cd $NAME
+    print_gitignore > .gitignore
+    print_lib_package_manifest $NAME > package.toml
+    print_lib_ocaml > src/lib.ml
+}
+
+new() {
+    NAME=""
+    TYPE=""
+    for ARG in $@; do
+        case $ARG in
+            --help|-h)
+                new_usage
+                exit
+                ;;
+        esac
+        if [ "${ARG#--}" != "$ARG" ]; then
+            case $ARG in
+                --bin)
+                    if [ -z $TYPE ]; then
+                        TYPE=bin
+                    else
+                        echo "Pass at most one of \`--bin\` and \`--lib\`" >&2
+                        exit 1
+                    fi
+                    ;;
+                --lib)
+                    if [ -z $TYPE ]; then
+                        TYPE=lib
+                    else
+                        echo "Pass at most one of \`--bin\` and \`--lib\`" >&2
+                        exit 1
+                    fi
+                    ;;
+                *)
+                    (
+                        echo "Unknown option \`$ARG\`."
+                        echo
+                        new_usage
+                    ) >&2
+                    exit 1
+
+            esac
+
+        else
+            if [ -z $NAME ]; then
+                NAME=$ARG
+            else
+                echo "Expected single directory but found multiple: \`$NAME\` and \`$ARG\`" >&2
+                exit 1
+            fi
+        fi
+    done
+    if [ -z "$TYPE" ]; then
+        TYPE=bin
+    fi
+    case $TYPE in
+        bin)
+            new_bin $NAME
+            ;;
+        lib)
+            new_lib $NAME
+            ;;
+    esac
+}
+
+if [ "$#" -eq 0 ]; then
+    usage
+    exit
+fi
+
+case $1 in
+    --help|-h)
+        usage
+        ;;
+    new)
+        shift
+        new $@
+        ;;
+    *)
+        (
+            echo "No such command: \`$1\`"
+            echo
+            echo "Valid commands are:"
+            print_commands
+        ) >&2
+        exit 1
+        ;;
+esac
