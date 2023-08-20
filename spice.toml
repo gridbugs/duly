@@ -1,0 +1,7 @@
+[package]
+name = "spice"
+
+[dependencies]
+
+[bin.spice]
+src = src

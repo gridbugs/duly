@@ -1,16 +1,8 @@
 #!/bin/sh
 set -eu
 
-print_commands() {
-    echo "new   create a new project"
-}
-
-usage() {
-    echo "Usage: $0 [COMMAND]"
-    echo
-    echo "Commands are:"
-    print_commands
-}
+DUNE_DIR=_dune
+MANIFEST_NAME=spice.toml
 
 new_usage() {
     echo "$0 new [OPTIONS] <path>"
@@ -78,7 +70,7 @@ new_bin() {
     mkdir -p $NAME/src
     cd $NAME
     print_gitignore > .gitignore
-    print_bin_package_manifest $NAME > package.toml
+    print_bin_package_manifest $NAME > $MANIFEST_NAME
     print_bin_ocaml > src/main.ml
 }
 
@@ -88,7 +80,7 @@ new_lib() {
     mkdir -p $NAME/src
     cd $NAME
     print_gitignore > .gitignore
-    print_lib_package_manifest $NAME > package.toml
+    print_lib_package_manifest $NAME > $MANIFEST_NAME
     print_lib_ocaml > src/lib.ml
 }
 
@@ -152,26 +144,41 @@ new() {
     esac
 }
 
-if [ "$#" -eq 0 ]; then
-    usage
-    exit
-fi
+print_commands() {
+    echo "new      create a new project"
+}
 
-case $1 in
-    --help|-h)
+usage() {
+    echo "Usage: $0 [COMMAND]"
+    echo
+    echo "Commands are:"
+    print_commands
+}
+
+main() {
+    if [ "$#" -eq 0 ]; then
         usage
-        ;;
-    new)
-        shift
-        new $@
-        ;;
-    *)
-        (
-            echo "No such command: \`$1\`"
-            echo
-            echo "Valid commands are:"
-            print_commands
-        ) >&2
         exit 1
-        ;;
-esac
+    fi
+
+    case $1 in
+        --help|-h)
+            usage
+            ;;
+        new)
+            shift
+            new $@
+            ;;
+        *)
+            (
+                echo "No such command: \`$1\`"
+                echo
+                echo "Valid commands are:"
+                print_commands
+            ) >&2
+            exit 1
+            ;;
+    esac
+}
+
+main

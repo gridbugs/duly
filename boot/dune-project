@@ -1,0 +1,13 @@
+(lang dune 3.0)
+
+(generate_opam_files true)
+
+(source (github gridbugs/spice))
+(authors "Stephen Sherratt")
+(maintainers "https://github.com/gridbugs/spice/issues")
+
+(package
+ (name spice_boot)
+ (synopsis "Minimal package for bootstrapping spice build system from dune")
+ (depends
+  (toml (= 7.1.0))))
