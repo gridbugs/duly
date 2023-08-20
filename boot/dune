@@ -1,2 +1,3 @@
 (executable
- (public_name spice_boot))
+ (public_name spice_boot)
+ (libraries stdune toml fileutils unix))

@@ -1,7 +1,16 @@
 [package]
 name = "spice"
+synopsis = "Alternative UX for dune and opam"
+homepage = "https://github.com/gridbugs/spice"
+license = "MIT"
+authors = ["Stephen Sherratt <stephen@sherra.tt>"]
+bug_reports = "https://github.com/gridbugs/spice/issues"
+maintainer = ["https://github.com/gridbugs/spice/issues"]
 
 [dependencies]
+stdune = "3.10.0"
+toml = "7.1.0"
+fileutils = "0.6.4"
 
-[bin.spice]
-src = src
+[bins]
+spice = "src"

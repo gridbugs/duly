@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
 
-DUNE_DIR=_dune
 MANIFEST_NAME=spice.toml
 
 new_usage() {
@@ -41,8 +40,8 @@ print_bin_package_manifest() {
     echo
     echo "[dependencies]"
     echo
-    echo "[bin.$NAME]"
-    echo src = "src"
+    echo "[bins.$NAME]"
+    echo "src = \"src\""
 }
 
 print_lib_package_manifest() {
@@ -52,8 +51,8 @@ print_lib_package_manifest() {
     echo
     echo "[dependencies]"
     echo
-    echo "[lib.$NAME]"
-    echo src = "src"
+    echo "[libs.$NAME]"
+    echo "src = \"src\""
 }
 
 print_bin_ocaml() {
