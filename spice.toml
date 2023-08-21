@@ -11,6 +11,7 @@ maintainer = ["https://github.com/gridbugs/spice/issues"]
 stdune = "3.10.0"
 toml = "7.1.0"
 fileutils = "0.6.4"
+core = "v0.16.1"
 
 [bins]
 spice = "src"
