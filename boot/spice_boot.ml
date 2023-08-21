@@ -284,41 +284,6 @@ module Manifest = struct
     List.iter t.bins ~f:(fun bin ->
         Bin.make_dune_directory bin ~root ~package_build_dir:package_dir_path
           ~package_dependencies:t.dependencies)
-
-  let make_merlin_file t ~root =
-    let original_working_dir = Unix.getcwd () in
-    let build_dir_path = root ^/ build_dir in
-    Unix.chdir build_dir_path;
-    let build_command =
-      Command.create "opam" [ "exec"; "dune"; "--"; "build" ]
-    in
-    let build_status =
-      Command.run_blocking_exn build_command ~stdio_redirect:`Ignore
-    in
-    if build_status <> 0 then failwith "Unexpected build failure";
-    let merlin_file =
-      Unix.openfile (root ^/ ".merlin") [ O_CREAT; O_RDWR ] 0o644
-    in
-    List.iter t.bins ~f:(fun (bin : Bin.t) ->
-        let dump_merlin_command =
-          Command.create "opam"
-            [
-              "exec";
-              "dune";
-              "--";
-              "ocaml";
-              "dump-dot-merlin";
-              t.name ^/ "bin" ^/ bin.name;
-            ]
-        in
-        let dump_merlin_status =
-          Command.run_blocking_exn dump_merlin_command
-            ~stdio_redirect:(`Ignore_with_stdout_to merlin_file)
-        in
-        if dump_merlin_status <> 0 then failwith "Unexpected build failure";
-        ());
-    Unix.close merlin_file;
-    Unix.chdir original_working_dir
 end
 
 let make_opam_file ~root =
@@ -377,5 +342,4 @@ let () =
   let manifest = Manifest.parse ~root in
   Manifest.instantiate manifest ~root;
   make_opam_file ~root;
-  Manifest.make_merlin_file manifest ~root;
   ()
