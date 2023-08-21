@@ -1,0 +1,4 @@
+(lang dune 3.0)
+; This file should be in the boot directory but it's temporarily here so that
+; ocamllsp can find the root directory of this project.
+(env (dev (flags :standard -warn-error -26-27-32-33-34-37-39)))

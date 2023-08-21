@@ -2,12 +2,47 @@ open Stdune
 
 let ( ^/ ) = Filename.concat
 
+module Command = struct
+  type t = { program : string; args : string list }
+
+  let create program args = { program; args }
+  let to_string { program; args } = String.concat ~sep:" " (program :: args)
+  let dev_null = Unix.openfile "/dev/null" [ Unix.O_RDWR ] 0
+  let args_arr { program; args } = Array.of_list (program :: args)
+
+  module Running = struct
+    type nonrec t = { pid : int; command : t }
+
+    let wait_exn { pid; command } =
+      let got_pid, status = Unix.waitpid [] pid in
+      if got_pid <> pid then failwith "wait returned unexpected pid";
+      match status with
+      | Unix.WEXITED status -> status
+      | _ ->
+          failwith
+            (Printf.sprintf "`%s` unexpected process status" (to_string command))
+  end
+
+  let run_background t ~stdio_redirect =
+    let stdin, stdout, stderr =
+      match stdio_redirect with
+      | `This_process -> (Unix.stdin, Unix.stdout, Unix.stderr)
+      | `Ignore -> (dev_null, dev_null, dev_null)
+      | `Ignore_with_stdout_to file_desc -> (dev_null, file_desc, dev_null)
+    in
+    let pid = Unix.create_process t.program (args_arr t) stdin stdout stderr in
+    { Running.pid; command = t }
+
+  let run_blocking_exn t ~stdio_redirect =
+    run_background t ~stdio_redirect |> Running.wait_exn
+end
+
 let write_text_file ~path ~contents =
   let out_channel = Out_channel.open_text path in
   Out_channel.output_string out_channel contents;
   Out_channel.close out_channel
 
-let dune_dir = "_dune"
+let build_dir = "build"
 
 module Package = struct
   type t = { name : string; version : string }
@@ -67,10 +102,9 @@ module Bin = struct
     in
     String.concat ~sep:"\n" lines
 
-  let make_dune_directory t ~root ~package_dependencies =
-    let dune_dir_path = root ^/ dune_dir in
+  let make_dune_directory t ~root ~package_build_dir ~package_dependencies =
     let source_dir_path = root ^/ t.src in
-    let bin_dir_path = dune_dir_path ^/ "bin" in
+    let bin_dir_path = package_build_dir ^/ "bin" in
     let this_bin_dir_path = bin_dir_path ^/ t.name in
     FileUtil.mkdir ~parent:true bin_dir_path;
     FileUtil.cp ~recurse:true [ source_dir_path ] this_bin_dir_path;
@@ -229,65 +263,69 @@ module Manifest = struct
     in
     String.concat ~sep:"\n" (List.filter_opt parts)
 
-  let make_empty_dune_dir ~root =
-    let dune_dir_path = root ^/ dune_dir in
-    if Sys.file_exists dune_dir_path then
-      if Sys.is_directory dune_dir_path then
-        FileUtil.rm ~force:Force ~recurse:true [ dune_dir_path ]
+  let make_empty_build_dir ~root =
+    let build_dir_path = root ^/ build_dir in
+    if Sys.file_exists build_dir_path then
+      if Sys.is_directory build_dir_path then
+        FileUtil.rm ~force:Force ~recurse:true [ build_dir_path ]
       else (
-        Printf.eprintf "%s exists and is not a directory" dune_dir_path;
+        Printf.eprintf "%s exists and is not a directory" build_dir_path;
         exit 1);
-    FileUtil.mkdir ~parent:true dune_dir_path
+    FileUtil.mkdir ~parent:true build_dir_path
 
   let instantiate t ~root =
-    let dune_dir_path = root ^/ dune_dir in
-    make_empty_dune_dir ~root;
+    let build_dir_path = root ^/ build_dir in
+    make_empty_build_dir ~root;
+    let package_dir_path = build_dir_path ^/ t.name in
+    FileUtil.mkdir ~parent:true package_dir_path;
     write_text_file
-      ~path:(dune_dir_path ^/ "dune-project")
+      ~path:(build_dir_path ^/ "dune-project")
       ~contents:(dune_project t);
     List.iter t.bins ~f:(fun bin ->
-        Bin.make_dune_directory bin ~root ~package_dependencies:t.dependencies)
-end
+        Bin.make_dune_directory bin ~root ~package_build_dir:package_dir_path
+          ~package_dependencies:t.dependencies)
 
-module Command = struct
-  type t = { program : string; args : string list }
-
-  let create program args = { program; args }
-  let to_string { program; args } = String.concat ~sep:" " (program :: args)
-  let dev_null = Unix.openfile "/dev/null" [ Unix.O_RDWR ] 0
-  let args_arr { program; args } = Array.of_list (program :: args)
-
-  module Running = struct
-    type nonrec t = { pid : int; command : t }
-
-    let wait_exn { pid; command } =
-      let got_pid, status = Unix.waitpid [] pid in
-      if got_pid <> pid then failwith "wait returned unexpected pid";
-      match status with
-      | Unix.WEXITED status -> status
-      | _ ->
-          failwith
-            (Printf.sprintf "`%s` unexpected process status" (to_string command))
-  end
-
-  let run_background t ~stdio_redirect =
-    let stdin, stdout, stderr =
-      match stdio_redirect with
-      | `This_process -> (Unix.stdin, Unix.stdout, Unix.stderr)
-      | `Ignore -> (dev_null, dev_null, dev_null)
+  let make_merlin_file t ~root =
+    let original_working_dir = Unix.getcwd () in
+    let build_dir_path = root ^/ build_dir in
+    Unix.chdir build_dir_path;
+    let build_command =
+      Command.create "opam" [ "exec"; "dune"; "--"; "build" ]
     in
-    let pid = Unix.create_process t.program (args_arr t) stdin stdout stderr in
-    { Running.pid; command = t }
-
-  let run_blocking_exn t ~stdio_redirect =
-    run_background t ~stdio_redirect |> Running.wait_exn
+    let build_status =
+      Command.run_blocking_exn build_command ~stdio_redirect:`Ignore
+    in
+    if build_status <> 0 then failwith "Unexpected build failure";
+    let merlin_file =
+      Unix.openfile (root ^/ ".merlin") [ O_CREAT; O_RDWR ] 0o644
+    in
+    List.iter t.bins ~f:(fun (bin : Bin.t) ->
+        let dump_merlin_command =
+          Command.create "opam"
+            [
+              "exec";
+              "dune";
+              "--";
+              "ocaml";
+              "dump-dot-merlin";
+              t.name ^/ "bin" ^/ bin.name;
+            ]
+        in
+        let dump_merlin_status =
+          Command.run_blocking_exn dump_merlin_command
+            ~stdio_redirect:(`Ignore_with_stdout_to merlin_file)
+        in
+        if dump_merlin_status <> 0 then failwith "Unexpected build failure";
+        ());
+    Unix.close merlin_file;
+    Unix.chdir original_working_dir
 end
 
 let make_opam_file ~root =
-  let dune_dir_path = root ^/ dune_dir in
+  let build_dir_path = root ^/ build_dir in
   let command =
-    Command.(
-      create "opam" [ "exec"; "dune"; "--"; "build"; "--root"; dune_dir_path ])
+    Command.create "opam"
+      [ "exec"; "dune"; "--"; "build"; "--root"; build_dir_path ]
   in
   (* Note that this command could fail due to missing dependencies but that's
      ok as it will still have the side effect of generating the opam file. *)
@@ -333,7 +371,11 @@ end
 
 let () =
   let { Args.root } = Args.parse () in
+  let root =
+    if Filename.is_relative root then Unix.getcwd () ^/ root else root
+  in
   let manifest = Manifest.parse ~root in
   Manifest.instantiate manifest ~root;
   make_opam_file ~root;
+  Manifest.make_merlin_file manifest ~root;
   ()
