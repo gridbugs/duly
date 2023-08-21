@@ -1,6 +1,7 @@
 # TODO
 
 - make it so that ocamllsp works with source files
+- separate opam switches for each package and one for build tools
 - allow non-concrete versions of dependencies
 - bootstrapping a `spice` installation from the shell script
 - a `package` command that generates archives suitable for installing with opam
