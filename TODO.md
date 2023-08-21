@@ -1,7 +1,12 @@
 # TODO
 
 - make it so that ocamllsp works with source files
+  - DONE but requires workaround for ocamllsp where projects must place a dummy
+    (but valid) `dune-workspace` file at their root.
 - separate opam switches for each package and one for build tools
+  - this will allow the ocaml version required by each package to be different
+    and also allow the ocaml version to be specified in toml, since the switch
+    containing build tools can be installed before any toml gets read.
 - allow non-concrete versions of dependencies
 - bootstrapping a `spice` installation from the shell script
 - a `package` command that generates archives suitable for installing with opam
@@ -12,9 +17,15 @@
 - multiple interdependent packages in single workspace
 - ocaml build scripts for all the non-trivial cases that would require a `rule` stanza in dune
 - watch mode
-- special file for noting the ocaml version to use during development
-  - this can't go in a toml file because it will need to be read by a shell
-    script before any ocaml programs are necessarily available
+
+## Hacks
+
+Currently ocamllsp needs a dune-workspace file to find the .merlin file at the
+project root. I'll either patch ocamllsp to not require this or fork my own
+version for building non-dune projects but in the meantime the dune-workspace
+file from `boot` is moved to the project root. This probably has implications
+for how the transient dune projects behave since they are now part of a
+workspace.
 
 ## Subcommands
 
