@@ -15,4 +15,7 @@ bootstrap:
 clean:
 	rm -rf _spice/dune_generated
 
-.PHONY: bootstrap clean
+mrproper:
+	rm -rf _opam _spice
+
+.PHONY: bootstrap clean mrproper
