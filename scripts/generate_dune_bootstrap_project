@@ -39,4 +39,4 @@ print_file_dune_project > $DUNE_DIR/dune-project
 print_file_dune > $DUNE_DIR/dune
 # This command will probably fail due to missing dependencies but will
 # still generate the opam file which is all that matters here.
-dune build --root=$DUNE_DIR 2> /dev/null || true
+opam exec dune -- build --root=$DUNE_DIR 2> /dev/null || true

@@ -1,4 +1,6 @@
 bootstrap:
+	# Make sure dune is installed
+	opam install -y dune
 	# Generate a naive dune version of spice with a shell script.
 	scripts/generate_dune_bootstrap_project .
 	# Install the naive spice package with opam.
@@ -16,6 +18,6 @@ clean:
 	rm -rf _spice/dune_generated
 
 mrproper:
-	rm -rf _opam _spice
+	rm -rf _opam _spice .merlin
 
 .PHONY: bootstrap clean mrproper
