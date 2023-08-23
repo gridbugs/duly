@@ -30,7 +30,17 @@ new_check() {
 }
 
 print_gitignore() {
+    echo "# local opam switch where build tools are installed"
     echo "_opam"
+    echo
+    echo "# persisted state used by spice such as intermediate build artifacts"
+    echo "_spice"
+    echo
+    echo "# generated database used for editor support"
+    echo ".merlin"
+    echo
+    echo "# dune build directories"
+    echo "**/_build/"
 }
 
 print_bin_package_manifest() {
@@ -133,6 +143,10 @@ new() {
     if [ -z "$TYPE" ]; then
         TYPE=bin
     fi
+    if [ -z $NAME ]; then
+      echo "Specify the name for the new project." >&2
+      exit 1
+    fi
     case $TYPE in
         bin)
             new_bin $NAME
@@ -156,6 +170,7 @@ usage() {
 
 main() {
     if [ "$#" -eq 0 ]; then
+        echo "Specify a command"
         usage
         exit 1
     fi
@@ -180,4 +195,4 @@ main() {
     esac
 }
 
-main
+main $@

@@ -1,4 +1,12 @@
-build
+# local opam switch where build tools are installed
 _opam
-**/_build/
+
+# persisted state used by spice such as intermediate build artifacts
+_spice
+
+# generated database used for editor support
 .merlin
+
+# dune build directories
+**/_build/
+

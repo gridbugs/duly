@@ -1,17 +1,18 @@
-boot:
-	# Install the bootstrapping tool.
-	opam install -y ./boot
-	# Use the bootstrapping tool to build the main tool.
-	opam exec spice_boot -- --root=.
-	# Install the main tool.
-	opam install -y ./build/spice.opam
-	# Use the main tool to build the main tool.
+bootstrap:
+	# Generate a naive dune version of spice with a shell script.
+	scripts/generate_dune_bootstrap_project .
+	# Install the naive spice package with opam.
+	opam install -y _spice/dune_generated/spice.opam
+	# Use the newly-installed naive spice package to rebuild spice.
 	opam exec spice -- --root=.
-	# Re-install the main tool after rebuilding it with itself.
-	opam install -y ./build/spice.opam
+	# Installed the bootstrapped version of spice.
+	opam install -y _spice/dune_generated/spice.opam
+	# As a sanity-check re-build spice with the bootstrapped spice.
+	opam exec spice -- --root=.
+	# Installed the rebuilt version of spice.
+	opam install -y _spice/dune_generated/spice.opam
 
 clean:
-	rm -rf build
-	opam exec dune -- clean
+	rm -rf _spice/dune_generated
 
-.PHONY: boot clean
+.PHONY: bootstrap clean

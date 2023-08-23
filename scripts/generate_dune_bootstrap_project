@@ -1,0 +1,42 @@
+#!/bin/sh
+set -eu
+
+print_file_dune_project() {
+    echo "(lang dune 3.0)"
+    echo "(generate_opam_files true)"
+    # Dummy values for some fields to silence opam warnings
+    echo "(maintainers x)"
+    echo "(authors x)"
+    echo "(homepage x)"
+    echo "(bug_reports x)"
+    echo "(package"
+    echo " (name spice)"
+    echo " (synopsis \"X x\")"
+    echo " (depends"
+    # It's important that these dependencies match the ones in spice.toml."
+    echo "  (core (= v0.16.1))"
+    echo "  (fileutils (= 0.6.4))"
+    echo "  (stdune (= 3.10.0))"
+    echo "  (toml (= 7.1.0))"
+    echo "))"
+}
+
+print_file_dune() {
+    echo "(executable"
+    echo " (public_name spice)"
+    echo " (name main)"
+    echo " (libraries core fileutils stdune toml))"
+}
+
+ROOT=$1
+SPICE_DIR=$ROOT/_spice
+DUNE_DIR=$SPICE_DIR/dune_generated
+SRC_DIR=$ROOT/src
+rm -rf $DUNE_DIR
+mkdir -p $DUNE_DIR
+cp $SRC_DIR/* $DUNE_DIR
+print_file_dune_project > $DUNE_DIR/dune-project
+print_file_dune > $DUNE_DIR/dune
+# This command will probably fail due to missing dependencies but will
+# still generate the opam file which is all that matters here.
+dune build --root=$DUNE_DIR 2> /dev/null || true

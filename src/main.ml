@@ -42,7 +42,7 @@ let write_text_file ~path ~contents =
   Out_channel.output_string out_channel contents;
   Out_channel.close out_channel
 
-let build_dir = "build"
+let build_dir = "_spice/dune_generated"
 
 module Package = struct
   type t = { name : string; version : string }
